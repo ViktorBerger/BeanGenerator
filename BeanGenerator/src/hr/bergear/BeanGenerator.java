@@ -159,16 +159,18 @@ public class BeanGenerator {
 	 *            bean properties
 	 * @return source code of the new java bean
 	 */
-	public static String generateBean(String name, List<Property> properties) {
+	public static String generateBean(BeanInfo info) {
 
 		beanCodeBuffer.setLength(0);
 		commentBuffer.setLength(0);
+		
+		List<Property> properties = info.getProperties();
 
 		if (!checkTypes(properties)) {
 			return "Pogrešni tip!";
 		}
 
-		beanCodeBuffer.append("public class " + name.trim() + " {\r\n");
+		beanCodeBuffer.append("public class " + info.getName() + " {\r\n");
 		generateFields(properties);
 		generateGetters(properties);
 		generateSetters(properties);

@@ -43,31 +43,28 @@ import javax.swing.text.DefaultEditorKit;
 
 @SuppressWarnings("serial")
 public class GUI extends JFrame {
-	
+
 	private static final int FILE = 0;
 	private static final int INPLACE = 1;
 
 	private JTextArea textArea;
 	private CompoundUndoManager um;
 	private JButton generateBtn;
-	
+
 	private Parser parser;
 	private JCheckBox clipboardCB;
 	private Clipboard clipboard;
 	private FilePicker filePicker;
-	
+
 	private int outputMethod = INPLACE;
 
-
 	public GUI() {
-		parser = new Parser();
+		parser = CsvParser.getInstance();
 		initGUI();
 	}
 
-	
-
 	private void initGUI() {
-		
+
 		setTitle("BeanGenerator v0.1");
 
 		setPreferredSize(new Dimension(800, 600));
@@ -76,7 +73,7 @@ public class GUI extends JFrame {
 		setLayout(new BorderLayout());
 
 		clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-		
+
 		textArea = new JTextArea();
 		textArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		um = new CompoundUndoManager(textArea);
@@ -92,8 +89,7 @@ public class GUI extends JFrame {
 		// manually register the accelerator in the button's component input map
 		generateBtn.getActionMap().put("myAction", generateBtnAction);
 		generateBtn.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
-				(KeyStroke) generateBtnAction.getValue(Action.ACCELERATOR_KEY),
-				"myAction");
+				(KeyStroke) generateBtnAction.getValue(Action.ACCELERATOR_KEY), "myAction");
 
 		setJMenuBar(createMenuBar());
 		add(textArea, BorderLayout.CENTER);
@@ -111,11 +107,11 @@ public class GUI extends JFrame {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			
+
 			if (!parseInput()) {
 				return;
 			}
-			String javaBeanSourceCode = BeanGenerator.generateBean(parser.getBeanName(), parser.getProperties());
+			String javaBeanSourceCode = BeanGenerator.generateBean(parser.getBeanInfo());
 
 			if (clipboardCB.isSelected()) {
 				StringSelection stringSelection = new StringSelection(javaBeanSourceCode);
@@ -123,38 +119,78 @@ public class GUI extends JFrame {
 			}
 
 			outputSourceCode(javaBeanSourceCode);
-			
-//			try {
-//				JsonParser.parse(textArea.getText());
-//			} catch (JsonProcessingException e1) {
-//				System.out.println("Json parsing problem: " + e1.getMessage());
-//				return;
-//			} catch (IOException e2) {
-//				System.out.println("IO problem (JSON)");
-//				return;
-//			}
-//			
-//			System.out.println(textArea.getText());
+
+			// try {
+			// JsonParser.parse(textArea.getText());
+			// } catch (JsonProcessingException e1) {
+			// System.out.println("Json parsing problem: " + e1.getMessage());
+			// return;
+			// } catch (IOException e2) {
+			// System.out.println("IO problem (JSON)");
+			// return;
+			// }
+			//
+			// System.out.println(textArea.getText());
 		}
 	};
 
 	private JPanel createPanel() {
-		
-		
+
 		JPanel panel = new JPanel();
 		panel.setMaximumSize(new Dimension(40, 10));
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		JLabel label = new JLabel("Output method:");
 
+		JRadioButton csvRadio = new JRadioButton("CSV");
+		JRadioButton jsonRadio = new JRadioButton("JSON");
+		JRadioButton xmlRadio = new JRadioButton("XML");
+		csvRadio.setSelected(true);
+
+		ButtonGroup groupType = new ButtonGroup();
+		groupType.add(csvRadio);
+		groupType.add(jsonRadio);
+		groupType.add(xmlRadio);
+		
+		JPanel inputTypePanel = new JPanel();
+		inputTypePanel.setLayout(new BoxLayout(inputTypePanel, BoxLayout.Y_AXIS));
+		inputTypePanel.setSize(new Dimension(100,50));
+		inputTypePanel.setBorder(BorderFactory.createTitledBorder("Input format"));
+		inputTypePanel.add(csvRadio);
+		inputTypePanel.add(jsonRadio);
+		inputTypePanel.add(xmlRadio);
+
+		csvRadio.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				parser = CsvParser.getInstance();
+			}
+		});
+
+		jsonRadio.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				parser = JsonParser.getInstance();
+			}
+		});
+
+		xmlRadio.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				parser = XmlParser.getInstance();
+			}
+		});
+
 		JRadioButton fileRb = new JRadioButton("File");
 		JRadioButton inplaceRb = new JRadioButton("In place");
+		inplaceRb.setSelected(true);
 
-		clipboardCB = new JCheckBox("Automatically copy to clipboard", false);
+		ButtonGroup group = new ButtonGroup();
+		group.add(fileRb);
+		group.add(inplaceRb);
 
-		filePicker = new FilePicker(this, "Browse...");
-		filePicker.getFileChooser().setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		filePicker.getFileChooser().setSelectedFile(new File(System.getProperty("user.home") + "/Desktop"));
-		
 		fileRb.addActionListener(new ActionListener() {
 
 			@Override
@@ -173,41 +209,32 @@ public class GUI extends JFrame {
 			}
 		});
 
-		inplaceRb.setSelected(true);
-		filePicker.setEnabled(false);
+		clipboardCB = new JCheckBox("Automatically copy to clipboard", false);
 
-		ButtonGroup group = new ButtonGroup();
-		group.add(fileRb);
-		group.add(inplaceRb);
+		filePicker = new FilePicker(this, "Browse...");
+		filePicker.getFileChooser().setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		filePicker.getFileChooser().setSelectedFile(new File(System.getProperty("user.home") + "/Desktop"));
+		filePicker.setEnabled(false);
 
 		panel.add(label);
 		panel.add(inplaceRb);
 		panel.add(fileRb);
 		panel.add(filePicker);
+		panel.add(inputTypePanel);
 		panel.add(clipboardCB);
 
-		
-
-//		JPanel panel = new JPanel();
-//		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-//		filePicker = new FilePicker(this, "Browse...");
-//		panel.add(filePicker);
 		panel.setBorder(BorderFactory.createLoweredSoftBevelBorder());
-		
-//		JRadioButton fileOutput = new JRadioButton("File");
-//		JRadioButton fileInplace = new JRadioButton("In place");
 
 		return panel;
 
 	}
-	
-	
+
 	private void outputSourceCode(String javaBeanSourceCode) {
 		switch (outputMethod) {
 		case FILE:
 			String path = filePicker.getSelectedFile();
 
-			File file = new File(path + System.getProperty("file.separator") + parser.getBeanName() + ".java");
+			File file = new File(path + System.getProperty("file.separator") + parser.getBeanInfo().getName() + ".java");
 			BufferedWriter writer = null;
 			try {
 				writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
@@ -231,8 +258,7 @@ public class GUI extends JFrame {
 			break;
 		}
 	}
-	
-	
+
 	/**
 	 * Parses input from text area.
 	 */
@@ -243,20 +269,22 @@ public class GUI extends JFrame {
 			return false;
 		}
 
-		parser.parseInput(input);
-		
-		if (parser.isJustName()) {
+		try {
+			parser.parse(input);
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(GUI.this, e.getMessage(), "Parsing error", JOptionPane.ERROR_MESSAGE);
+			return false;
+		}
+
+		if (parser.getBeanInfo().getProperties() == null) {
 			JOptionPane.showMessageDialog(GUI.this, "Trying to generate an empty bean", "Empty bean warning",
 					JOptionPane.WARNING_MESSAGE);
 			return false;
 		}
-		
-		
-		
+
 		return true;
 	}
-	
-	
+
 	/**
 	 * Creates menu bar with menus, menu items and corresponding actions.
 	 * 
@@ -304,7 +332,7 @@ public class GUI extends JFrame {
 		menuBar.add(editMenu);
 		return menuBar;
 	}
-	
+
 	public static void main(String[] args) {
 
 		try {
@@ -313,7 +341,6 @@ public class GUI extends JFrame {
 				@Override
 				public void run() {
 					try {
-						// Set cross-platform Java L&F (also called "Metal")
 						UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 					} catch (UnsupportedLookAndFeelException e) {
 						// handle exception
@@ -324,11 +351,10 @@ public class GUI extends JFrame {
 					} catch (IllegalAccessException e) {
 						// handle exception
 					}
-					
+
 					GUI gui = new GUI();
 					gui.setVisible(true);
-					gui.setExtendedState(gui.getExtendedState()
-							| JFrame.MAXIMIZED_BOTH);
+					gui.setExtendedState(gui.getExtendedState() | JFrame.MAXIMIZED_BOTH);
 
 				}
 			});
@@ -339,7 +365,5 @@ public class GUI extends JFrame {
 		}
 
 	}
-
-	
 
 }

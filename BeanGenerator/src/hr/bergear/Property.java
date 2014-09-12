@@ -7,12 +7,25 @@ public class Property {
 	
 	public Property() {	}
 
-	public Property(String name, String type, String comment) {
-		super();
+	private Property(String name, String type) {
+		this.name = decapitalize(name);
+		this.type = type;
+	}
+	
+	private  Property(String name, String type, String comment) {
 		this.name = decapitalize(name);
 		this.type = type;
 		this.comment = comment;
 	}
+	
+	public static Property withComment(String name, String type, String comment) {
+		return new Property(name, type, comment);
+	}
+	
+	public static Property withoutComment(String name, String type) {
+		return new Property(name, type);
+	}
+	
 	
 	private static String decapitalize(String field) {
 		return Character.toLowerCase(field.charAt(0)) + field.substring(1);
