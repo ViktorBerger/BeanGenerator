@@ -7,10 +7,6 @@ public class Property {
 	
 	public Property() {	}
 
-	private Property(String name, String type) {
-		this.name = decapitalize(name);
-		this.type = type;
-	}
 	
 	private  Property(String name, String type, String comment) {
 		this.name = decapitalize(name);
@@ -23,7 +19,7 @@ public class Property {
 	}
 	
 	public static Property withoutComment(String name, String type) {
-		return new Property(name, type);
+		return new Property(name, type, "");
 	}
 	
 	

@@ -18,7 +18,6 @@ public class CsvParser implements Parser{
 
 	private BeanInfo beanInfo;
 	private List<Property> props;
-	private boolean justName;
 	private String delimiter;
 	
 	public static CsvParser getInstance() {
@@ -44,26 +43,15 @@ public class CsvParser implements Parser{
 	public void parse(String input) {
 		beanInfo = new BeanInfo();
 		props.clear();
-		justName = false;
 
 		String[] ps = input.split("\n");
-
-		if (ps.length == 1) {
-			justName = true;
-		} else {
-			justName = false;
-		}
-
-		if (ps.length < 2) {
-			return;
-		}
-
-		
+	
 		String[] firstLine = ps[0].split(delimiter); 
 		int fllength = firstLine.length;
 		
 		if (fllength == 1) {
 			beanInfo.setName(firstLine[0]);
+			beanInfo.setComment("");
 		} else if (fllength == 2) {
 			beanInfo.setName(firstLine[0]);
 			beanInfo.setComment(firstLine[1]);
@@ -118,9 +106,6 @@ public class CsvParser implements Parser{
 		return props;
 	}
 
-	public boolean isJustName() {
-		return justName;
-	}
 	
 	public void setDelimiter(String delimiter) {
 		this.delimiter = delimiter;

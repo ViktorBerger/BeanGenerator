@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -47,7 +48,7 @@ public class GUI extends JFrame {
 
 	private static final int FILE = 0;
 	private static final int INPLACE = 1;
-	
+
 	private static final int WIDTH = 800;
 	private static final int HEIGHT = 600;
 	private static final Dimension dimension = new Dimension(WIDTH, HEIGHT);
@@ -67,6 +68,9 @@ public class GUI extends JFrame {
 	private JRadioButton jsonRadio;
 	private JRadioButton xmlRadio;
 
+	private JFileChooser fileChooser;
+	private File openedFile;
+
 	public GUI() {
 		parser = CsvParser.getInstance();
 		initGUI();
@@ -76,11 +80,13 @@ public class GUI extends JFrame {
 
 		setTitle("BeanGenerator v0.1");
 
+		fileChooser = new JFileChooser();
+
 		setPreferredSize(dimension);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
 		setLayout(new BorderLayout());
-		
+
 		setMinimumSize(dimension);
 
 		clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
@@ -89,13 +95,13 @@ public class GUI extends JFrame {
 		textArea.setTabSize(4);
 		textArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK), "none");
-		
+
 		um = new CompoundUndoManager(textArea);
 
 		JToolBar toolbar = new JToolBar();
 		JButton undo = new JButton(um.getUndoAction());
 		JButton redo = new JButton(um.getRedoAction());
-		
+
 		generateBtn = new JButton(generateBtnAction);
 		// configure the Action with the accelerator (aka: short cut)
 		generateBtnAction.putValue(Action.ACCELERATOR_KEY,
@@ -117,6 +123,59 @@ public class GUI extends JFrame {
 
 		pack();
 	}
+
+	private Action openFileAction = new AbstractAction("Open...") {
+
+		public void actionPerformed(ActionEvent e) {
+			// Handle open button action.
+			int returnVal = fileChooser.showOpenDialog(GUI.this);
+
+			if (returnVal == JFileChooser.APPROVE_OPTION) {
+				openedFile = fileChooser.getSelectedFile();
+
+				String text = "";
+				try {
+					text = new String(Files.readAllBytes(openedFile.toPath()));
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+
+				textArea.setText(text);
+				checkFormat(text);
+			}
+		}
+	};
+
+	private Action saveFileAction = new AbstractAction("Save...") {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			int returnVal = fileChooser.showSaveDialog(GUI.this);
+
+			if (returnVal == JFileChooser.APPROVE_OPTION) {
+				File file = fileChooser.getSelectedFile();
+
+				BufferedWriter writer = null;
+				try {
+					writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
+					writer.write(textArea.getText());
+				} catch (FileNotFoundException e1) {
+					JOptionPane.showMessageDialog(GUI.this, "No such file!", "Problem", JOptionPane.ERROR_MESSAGE);
+				} catch(IOException e2) { 
+					JOptionPane.showMessageDialog(GUI.this, "Cannot write to file: " + file.getName(), "Problem", JOptionPane.ERROR_MESSAGE);
+				}finally {
+					if (writer != null) {
+						try {
+							writer.close();
+						} catch (IOException ignorable) {
+						}
+					}
+				}
+			}
+
+		}
+
+	};
 
 	private Action generateBtnAction = new AbstractAction("Generate") {
 
@@ -308,17 +367,27 @@ public class GUI extends JFrame {
 		editMenu.setMnemonic(KeyEvent.VK_E);
 		fileMenu.setMnemonic(KeyEvent.VK_F);
 
+		menuItem = new JMenuItem(openFileAction);
+		menuItem.setMnemonic(KeyEvent.VK_O);
+		menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ActionEvent.CTRL_MASK));
+		fileMenu.add(menuItem);
+
+		menuItem = new JMenuItem(saveFileAction);
+		menuItem.setMnemonic(KeyEvent.VK_S);
+		menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
+		fileMenu.add(menuItem);
+		
 		menuItem = new JMenuItem();
 		menuItem.setText("Exit");
 		menuItem.setMnemonic(KeyEvent.VK_K);
 		menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, ActionEvent.ALT_MASK));
-		fileMenu.add(menuItem);
 		menuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.exit(0);
 			}
 		});
+		fileMenu.add(menuItem);
 
 		menuItem = new JMenuItem(new DefaultEditorKit.CutAction());
 		menuItem.setText("Cut");
@@ -337,13 +406,12 @@ public class GUI extends JFrame {
 		menuItem.setMnemonic(KeyEvent.VK_P);
 		menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK));
 		editMenu.add(menuItem);
-		
+
 		editMenu.add(new JSeparator(SwingConstants.HORIZONTAL));
-		
-		
+
 		menuItem = new JMenuItem(um.getUndoAction());
 		editMenu.add(menuItem);
-		
+
 		menuItem = new JMenuItem(um.getRedoAction());
 		editMenu.add(menuItem);
 
@@ -361,16 +429,21 @@ public class GUI extends JFrame {
 			paste.actionPerformed(e);
 			String text = textArea.getText().trim();
 
-			if (text.startsWith("<")) {
-				xmlRadio.doClick();
-			} else if (text.startsWith("{")) {
-				jsonRadio.doClick();
-			} else {
-				csvRadio.doClick();
-			}
+			checkFormat(text);
 
 		}
+
 	};
+
+	private void checkFormat(String text) {
+		if (text.startsWith("<")) {
+			xmlRadio.doClick();
+		} else if (text.startsWith("{")) {
+			jsonRadio.doClick();
+		} else {
+			csvRadio.doClick();
+		}
+	}
 
 	public static void main(String[] args) {
 
