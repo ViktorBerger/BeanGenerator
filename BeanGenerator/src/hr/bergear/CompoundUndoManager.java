@@ -144,7 +144,7 @@ public class CompoundUndoManager extends UndoManager implements UndoableEditList
 			putValue(Action.NAME, "Undo");
 			putValue(Action.SHORT_DESCRIPTION, getValue(Action.NAME));
 			putValue(Action.MNEMONIC_KEY, new Integer(KeyEvent.VK_U));
-			putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control Z"));
+			putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_Z, ActionEvent.CTRL_MASK));
 			setEnabled(false);
 		}
 

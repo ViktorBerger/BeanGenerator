@@ -2,6 +2,7 @@ package hr.bergear;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -19,23 +20,23 @@ import java.lang.reflect.InvocationTargetException;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -46,6 +47,10 @@ public class GUI extends JFrame {
 
 	private static final int FILE = 0;
 	private static final int INPLACE = 1;
+	
+	private static final int WIDTH = 800;
+	private static final int HEIGHT = 600;
+	private static final Dimension dimension = new Dimension(WIDTH, HEIGHT);
 
 	private JTextArea textArea;
 	private CompoundUndoManager um;
@@ -58,6 +63,10 @@ public class GUI extends JFrame {
 
 	private int outputMethod = INPLACE;
 
+	private JRadioButton csvRadio;
+	private JRadioButton jsonRadio;
+	private JRadioButton xmlRadio;
+
 	public GUI() {
 		parser = CsvParser.getInstance();
 		initGUI();
@@ -67,20 +76,26 @@ public class GUI extends JFrame {
 
 		setTitle("BeanGenerator v0.1");
 
-		setPreferredSize(new Dimension(800, 600));
+		setPreferredSize(dimension);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
 		setLayout(new BorderLayout());
+		
+		setMinimumSize(dimension);
 
 		clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 
 		textArea = new JTextArea();
+		textArea.setTabSize(4);
 		textArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK), "none");
+		
 		um = new CompoundUndoManager(textArea);
 
 		JToolBar toolbar = new JToolBar();
 		JButton undo = new JButton(um.getUndoAction());
 		JButton redo = new JButton(um.getRedoAction());
+		
 		generateBtn = new JButton(generateBtnAction);
 		// configure the Action with the accelerator (aka: short cut)
 		generateBtnAction.putValue(Action.ACCELERATOR_KEY,
@@ -119,41 +134,36 @@ public class GUI extends JFrame {
 			}
 
 			outputSourceCode(javaBeanSourceCode);
-
-			// try {
-			// JsonParser.parse(textArea.getText());
-			// } catch (JsonProcessingException e1) {
-			// System.out.println("Json parsing problem: " + e1.getMessage());
-			// return;
-			// } catch (IOException e2) {
-			// System.out.println("IO problem (JSON)");
-			// return;
-			// }
-			//
-			// System.out.println(textArea.getText());
 		}
 	};
 
 	private JPanel createPanel() {
 
 		JPanel panel = new JPanel();
-		panel.setMaximumSize(new Dimension(40, 10));
-		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-		JLabel label = new JLabel("Output method:");
+		panel.setLayout(new GridLayout(5, 1));
 
-		JRadioButton csvRadio = new JRadioButton("CSV");
-		JRadioButton jsonRadio = new JRadioButton("JSON");
-		JRadioButton xmlRadio = new JRadioButton("XML");
+		filePicker = new FilePicker(this, "Browse...");
+		filePicker.getFileChooser().setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		filePicker.getFileChooser().setSelectedFile(new File(System.getProperty("user.home") + "/Desktop"));
+		filePicker.setEnabled(false);
+
+		csvRadio = new JRadioButton("CSV");
+		jsonRadio = new JRadioButton("JSON");
+		xmlRadio = new JRadioButton("XML");
 		csvRadio.setSelected(true);
 
 		ButtonGroup groupType = new ButtonGroup();
 		groupType.add(csvRadio);
 		groupType.add(jsonRadio);
 		groupType.add(xmlRadio);
-		
+
 		JPanel inputTypePanel = new JPanel();
-		inputTypePanel.setLayout(new BoxLayout(inputTypePanel, BoxLayout.Y_AXIS));
-		inputTypePanel.setSize(new Dimension(100,50));
+		inputTypePanel.setPreferredSize(new Dimension(100, 100));
+		GridLayout gl = new GridLayout(3, 1);
+		gl.setHgap(3);
+		gl.setVgap(5);
+
+		inputTypePanel.setLayout(gl);
 		inputTypePanel.setBorder(BorderFactory.createTitledBorder("Input format"));
 		inputTypePanel.add(csvRadio);
 		inputTypePanel.add(jsonRadio);
@@ -187,6 +197,14 @@ public class GUI extends JFrame {
 		JRadioButton inplaceRb = new JRadioButton("In place");
 		inplaceRb.setSelected(true);
 
+		JPanel outputMethodPanel = new JPanel();
+		GridLayout gl1 = new GridLayout(3, 1);
+		outputMethodPanel.setLayout(gl1);
+		outputMethodPanel.setBorder(BorderFactory.createTitledBorder("Output method:"));
+		outputMethodPanel.add(inplaceRb);
+		outputMethodPanel.add(fileRb);
+		outputMethodPanel.add(filePicker);
+
 		ButtonGroup group = new ButtonGroup();
 		group.add(fileRb);
 		group.add(inplaceRb);
@@ -211,15 +229,7 @@ public class GUI extends JFrame {
 
 		clipboardCB = new JCheckBox("Automatically copy to clipboard", false);
 
-		filePicker = new FilePicker(this, "Browse...");
-		filePicker.getFileChooser().setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		filePicker.getFileChooser().setSelectedFile(new File(System.getProperty("user.home") + "/Desktop"));
-		filePicker.setEnabled(false);
-
-		panel.add(label);
-		panel.add(inplaceRb);
-		panel.add(fileRb);
-		panel.add(filePicker);
+		panel.add(outputMethodPanel);
 		panel.add(inputTypePanel);
 		panel.add(clipboardCB);
 
@@ -322,16 +332,45 @@ public class GUI extends JFrame {
 		menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, ActionEvent.CTRL_MASK));
 		editMenu.add(menuItem);
 
-		menuItem = new JMenuItem(new DefaultEditorKit.PasteAction());
+		menuItem = new JMenuItem(pasteAction);
 		menuItem.setText("Paste");
 		menuItem.setMnemonic(KeyEvent.VK_P);
 		menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, ActionEvent.CTRL_MASK));
+		editMenu.add(menuItem);
+		
+		editMenu.add(new JSeparator(SwingConstants.HORIZONTAL));
+		
+		
+		menuItem = new JMenuItem(um.getUndoAction());
+		editMenu.add(menuItem);
+		
+		menuItem = new JMenuItem(um.getRedoAction());
 		editMenu.add(menuItem);
 
 		menuBar.add(fileMenu);
 		menuBar.add(editMenu);
 		return menuBar;
 	}
+
+	private AbstractAction pasteAction = new AbstractAction("Paste") {
+
+		Action paste = new DefaultEditorKit.PasteAction();
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			paste.actionPerformed(e);
+			String text = textArea.getText().trim();
+
+			if (text.startsWith("<")) {
+				xmlRadio.doClick();
+			} else if (text.startsWith("{")) {
+				jsonRadio.doClick();
+			} else {
+				csvRadio.doClick();
+			}
+
+		}
+	};
 
 	public static void main(String[] args) {
 
